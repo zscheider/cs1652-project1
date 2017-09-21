@@ -1,3 +1,10 @@
+/**
+ * CS 1652 Project 1 - HTTP Client
+ *
+ * Zach Scheider - zds14@pitt.edu
+ * Henri Frelin -
+ */
+
 #include "minet_socket.h"
 #include <stdlib.h>
 #include <ctype.h>
@@ -32,17 +39,37 @@ int main(int argc, char * argv[]) {
 	minet_init(MINET_USER);
     } else {
 	fprintf(stderr, "First argument must be k or u\n");
+    free(req);
 	exit(-1);
     }
 
     /* make socket */
+    int socket = minet_socket(SOCK_STREAM);
+    if (-1 == socket) {
+        fprintf(stderr, "Socket was not created. Exiting program.\n");
+        free(req);
+        exit(-1);
+    }
 
     /* get host IP address  */
     /* Hint: use gethostbyname() */
+    struct hostent *host = gethostbyname(server_name);
+    if (host == NULL) {
+        fprintf(stderr, "Could not retrieve IP from the server name entered.\n");
+        free(req);
+        close(socket);
+        exit(-1);
+    }
 
     /* set address */
+    struct sockaddr_in addr;
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(server_port);
+    memcpy(&addr.sin_addr.s_addr, host->h_addr, host->h_length);
+
 
     /* connect to the server socket */
+
 
     /* send request message */
     sprintf(req, "GET %s HTTP/1.0\r\n\r\n", server_path);
