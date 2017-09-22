@@ -8,6 +8,8 @@
 #include "minet_socket.h"
 #include <stdlib.h>
 #include <ctype.h>
+#include <string>
+#include <iostream>
 
 using namespace std;
 
@@ -80,7 +82,7 @@ int main(int argc, char * argv[]) {
 
     /* send request message */
     sprintf(req, "GET %s HTTP/1.0\r\n\r\n", server_path);
-    if (minet_write(socket, req, !(strlen(req)) >= 0)) {
+    if (minet_write(socket, req, strlen(req)) < 0) {
         fprintf(stderr, "Unable to send message to server.\n");
         free(req);
         exit(-1);
@@ -91,9 +93,16 @@ int main(int argc, char * argv[]) {
 
     fd_set fds;
     FD_ZERO(&fds);
-    FD_SET(socket_fd, &fds);
+    FD_SET(socket, &fds);
 
-    select(socket + 1, &set, NULL, NULL, NULL);
+    //if (select(socket + 1, &fds, NULL, NULL, NULL) < 0) {
+    if (minet_select(socket + 1, &fds, NULL, NULL, NULL) < 0) {
+        fprintf(stderr, "Unable to select a socket.\n");
+        free(req);
+        minet_close(socket);
+        minet_deinit();
+        exit(-1);
+    }
 
     /* first read loop -- read headers */
     char buf[BUFSIZE];
@@ -109,7 +118,7 @@ int main(int argc, char * argv[]) {
     string header = "";
     size_t pos;
 
-    while (read ) {
+    while (read) {
         buf[read] = '\0';
         response += string(buf);
         pos = response.find("\r\n\r\n", 0);
@@ -143,7 +152,7 @@ int main(int argc, char * argv[]) {
     }
 
     /* second read loop -- print out the rest of the response: real web content */
-    while ((read = minet_read(socket, buf, BUFSIZE - 1)) {
+    while ((read = minet_read(socket, buf, BUFSIZE - 1))) {
         buf[read] = '\0';
         if(ok) {
             printf("%s", buf);
@@ -156,7 +165,7 @@ int main(int argc, char * argv[]) {
     /*close socket and deinitialize */
     minet_close(socket);
     minet_deinit();
-    free(req)
+    free(req);
 
     if (ok) {
 	return 0;
