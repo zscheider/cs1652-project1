@@ -2,7 +2,7 @@
  * CS 1652 Project 1 - HTTP Client
  *
  * Zach Scheider - zds14@pitt.edu
- * Henri Frelin -
+ * Henri Frelin - hjf9@pitt.edu
  */
 
 #include "minet_socket.h"
