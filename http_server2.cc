@@ -12,7 +12,7 @@
 #include <ctype.h>
 #include <fcntl.h>
 #include <sys/stat.h>
-#include <sys/types.h>          
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #include <string>
@@ -25,6 +25,35 @@ using namespace std;
 
 int handle_connection(int sock);
 int parse(const char * request, char * filename, int len);
+int parse (const char * source, char * name, int length) {
+
+  int sourceLength = strlen(source);
+  char*temp0 = new char[sourceLength+1];
+  char*temp1 = new char[sourceLength+1];
+  strcpy(temp0, source);
+  char*temp2 = strstr(temp0, " HTTP/1.");
+
+  if (!temp2 || (strncmp(temp0, "GET ", 4) != 0)) {
+    delete [] temp0;
+    delete [] temp1;
+    return -1;
+  }
+  *temp2 = '\0';
+  if (temp0 [4] == '/') {
+    	strcpy(temp1, &temp0[5]);
+  } else {
+    	strcpy(temp1, &temp0[4]);
+  }
+  if ((int)strlen(temp1) + 1 > length) {
+    	delete [] temp0;
+    	delete [] temp1;
+    	return -1;
+  }
+  strcpy(name, temp1);
+  	delete[]temp0;
+  	delete[]temp1;
+  	return 0;
+}
 
 int main(int argc, char * argv[]) {
     int server_port = -1;
@@ -43,7 +72,7 @@ int main(int argc, char * argv[]) {
 	fprintf(stderr, "INVALID PORT NUMBER: %d; can't be < 1500\n", server_port);
 	exit(-1);
     }
-    
+
     /* initialize and make socket */
     if (toupper(*(argv[1])) == 'K') {
         minet_init(MINET_KERNEL);
@@ -74,7 +103,7 @@ int main(int argc, char * argv[]) {
         exit(-1);
     }
     /* start listening */
-    int listen = minet_listen(sock, SOMAXCONN);  
+    int listen = minet_listen(sock, SOMAXCONN);
     if(listen < 0){
         printf("Error with listener socket\n");
         exit(-1);
@@ -97,7 +126,7 @@ int main(int argc, char * argv[]) {
 
         /* create read list */
         connections = master;
-	
+
 	   /* do a select */
         int selected = minet_select(maxsocks + 1, &connections, 0, 0, 0);
 
@@ -108,7 +137,7 @@ int main(int argc, char * argv[]) {
                     /* for the accept socket, add accepted connection to connections */
                     if(i == sock) {
                         int client = minet_accept(sock, 0);
-                        
+
                         if(client) {
                             if(client > maxsocks) {
                                 maxsocks = client;
@@ -143,13 +172,13 @@ int handle_connection(int sock) {
 	"Content-length: %d \r\n\r\n";
     char ok_response[strlen(ok_response_f)];
 
-    
+
     const char * notok_response = "HTTP/1.0 404 FILE NOT FOUND\r\n"	\
 	"Content-type: text/html\r\n\r\n"			\
 	"<html><body bgColor=black text=white>\n"		\
 	"<h2>404 FILE NOT FOUND</h2>\n"				\
 	"</body></html>\n";
-    
+
     /* first read loop -- get request and headers*/
     char getBuf[BUFSIZE];
     int read = minet_read(sock, getBuf, BUFSIZE -1);  //RETEST HERE
@@ -164,7 +193,7 @@ int handle_connection(int sock) {
     while(read > 0){
         temp = temp + string(getBuf);
         temp1 = temp.find("\r\n\r\n");
-        
+
         if(temp1 != string::npos){
             temp = temp.substr(0, temp1);
             break; // break when we hit /r/n/r/n
@@ -184,7 +213,7 @@ int handle_connection(int sock) {
         ok = false;
     }
 
-    if(!strcmp(name, "")){ // RETEST THIS     
+    if(!strcmp(name, "")){ // RETEST THIS
         //strcpy(name, "index.html");
     }
 
@@ -193,7 +222,7 @@ int handle_connection(int sock) {
     string fileToString;
     int sending;
     FILE * file = fopen(name, "rb");
-    
+
     if(file == NULL){
         ok = false;
         printf("NULL FILE ERROR");
@@ -214,7 +243,7 @@ int handle_connection(int sock) {
         sprintf(ok_response, ok_response_f, fileToString.size());
         // Add the response and content into a string
         fileToString = string(ok_response) + fileToString;
-        
+
         /* send file */
         sending = minet_write(sock, const_cast<char*>(fileToString.c_str()), fileToString.size());
 
@@ -232,40 +261,10 @@ int handle_connection(int sock) {
     }
 
     /* close socket and free space */
-  
+
     if (ok) {
 	   return 0;
     } else {
 	   return -1;
     }
-}
-
-int parse (const char * source, char * name, int length) {
-
-  int sourceLength = strlen(source);
-  char*temp0 = new char[sourceLength+1];
-  char*temp1 = new char[sourceLength+1];
-  strcpy(temp0, source);
-  char*temp2 = strstr(temp0, " HTTP/1.");
-
-  if (!temp2 || (strncmp(temp0, "GET ", 4) != 0)) {
-    delete [] temp0;
-    delete [] temp1;
-    return -1;
-  }
-  *temp2 = '\0';
-  if (temp0 [4] == '/') {
-    strcpy(temp1, &temp0[5]);
-  } else {
-    strcpy(temp1, &temp0[4]);
-  }
-  if ((int)strlen(temp1) + 1 > length) {
-    delete [] temp0;
-    delete [] temp1;
-    return -1;
-  }
-  strcpy(name, temp1);
-  delete [] temp0;
-  delete [] temp1;
-  return 0;
 }
